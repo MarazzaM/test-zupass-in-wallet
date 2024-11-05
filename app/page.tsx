@@ -16,7 +16,8 @@ export default function Page() {
         revealProductId: true
       },
       watermark,
-      config
+      config,
+      returnUrl: window.location.href
     });
     
     if (result.type === "pcd") {
