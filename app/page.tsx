@@ -1,101 +1,102 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { zuAuthPopup } from "@pcd/zuauth";
+import type { PipelineEdDSATicketZuAuthConfig } from "@pcd/passport-interface";
+import { useState } from "react";
+
+const ticketTypeNames = [
+  "MegaZu"
+] as const;
+export type TicketTypeName = (typeof ticketTypeNames)[number];
+
+
+const watermark = "0";
+export const whitelistedTickets: Record<
+  TicketTypeName,
+  PipelineEdDSATicketZuAuthConfig[]
+> = {
+  MegaZu: [
+    {
+      "pcdType": "eddsa-ticket-pcd",
+      "publicKey": [
+        "1ebfb986fbac5113f8e2c72286fe9362f8e7d211dbc68227a468d7b919e75003",
+        "10ec38f11baacad5535525bbe8e343074a483c051aa1616266f3b1df3fb7d204"
+      ],
+      "productId": "b6d0715e-27be-5bf2-8041-125cc8e89d07",
+      "eventId": "70848dea-365b-5838-b36e-f691e3151cbd",
+      "eventName": "MegaZu24",
+      "productName": "Resident"
+    },
+    {
+      "pcdType": "eddsa-ticket-pcd",
+      "publicKey": [
+        "1ebfb986fbac5113f8e2c72286fe9362f8e7d211dbc68227a468d7b919e75003",
+        "10ec38f11baacad5535525bbe8e343074a483c051aa1616266f3b1df3fb7d204"
+      ],
+      "productId": "7929010a-d31f-5355-a633-b2e8af4f36db",
+      "eventId": "70848dea-365b-5838-b36e-f691e3151cbd",
+      "eventName": "MegaZu24",
+      "productName": "Core-Organizer"
+    }
+  ]
+};
+const config = Object.entries(whitelistedTickets).flatMap(
+  ([ticketType, tickets]) =>
+    tickets
+      .map((ticket) => {
+        if (ticket.eventId && ticket.productId) {
+          return {
+            pcdType: ticket.pcdType,
+            ticketType: ticketType as TicketTypeName,
+            eventId: ticket.eventId,
+            productId: ticket.productId,
+            eventName: ticket.eventName || "",
+            productName: ticket.productName || "",
+            publicKey: ticket.publicKey
+          };
+        }
+        return null;
+      })
+      .filter((ticket): ticket is NonNullable<typeof ticket> => ticket !== null)
+);
+
+export default function Page() {
+  const [pcdData, setPcdData] = useState<string | null>(null);
+
+  const handleZupass = async () => {
+    const result = await zuAuthPopup({
+      fieldsToReveal: {
+        revealAttendeeEmail: true,
+        revealAttendeeName: true,
+        revealEventId: true,
+        revealProductId: true
+      },
+      watermark,
+      config
+    });
+    
+    if (result.type === "pcd") {
+      try {
+        console.log("Got PCD data: ", result.pcdStr);
+        setPcdData(result.pcdStr);
+      } catch (e) {
+        console.log("Authentication failed: ", e);
+      }
+    }
+  }
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div>
+      <button onClick={handleZupass}>Zupass</button>
+      {pcdData && (
+        <div className="mt-4">
+          <h2>PCD Data:</h2>
+          <pre className="bg-gray-100 p-4 rounded">
+            {JSON.stringify(JSON.parse(pcdData), null, 2)}
+          </pre>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      )}
     </div>
-  );
+  )
 }
+
